@@ -1,0 +1,200 @@
+import { EventEmitter } from 'stream';
+import { Grid, GridSize, gridCreate, CellValue, gridGetCellValue, gridSetCellValue, gridCoordinatesAreWinning, gridFull } from './Grid'
+
+/**
+ * game of tic tac toe has
+ * - 2 players
+ * - grid with values
+ * - turns
+ * - winner, loser
+ * - events (start, complete, etc)
+ */
+
+export enum TicTacToePlayer {
+  ONE = 1,
+  TWO
+}
+
+export const TicTacToePlayerValueMap : Record<TicTacToePlayer, CellValue.X | CellValue.O> = {
+  [TicTacToePlayer.ONE]: CellValue.X,
+  [TicTacToePlayer.TWO]: CellValue.O,
+}
+
+export const TicTacToeValuePlayerMap : Record<CellValue.X | CellValue.O, TicTacToePlayer.ONE | TicTacToePlayer.TWO> = {
+    [CellValue.X]: TicTacToePlayer.ONE,
+    [CellValue.O]: TicTacToePlayer.TWO,
+  }
+
+export interface TicTacToePlayerTurn {
+  // the player executing the turn
+  player: TicTacToePlayer;
+  x: number;
+  y: number;
+}
+
+export enum TicTacToeGameState {
+  NOT_STARTED = 1,
+  ONGOING,
+  COMPLETE
+}
+
+/**
+ * states:
+ *  - not started
+ *  - inProgress
+ *  - complete (winner found or grid filled)
+ *    - withWinner
+ *    - gridFilled => stalemate
+ * 
+ * events:
+ * - game start
+ * - turn executed
+ * - game complete
+ */
+
+
+
+export enum TicTacToeGameEvents {
+    START = 'START',
+    TURN_EXECUTED = 'TURN_EXECUTED',
+    GAME_COMPLETE = 'GAME_COMPLETE',
+}
+
+export interface TicTacToeGameStartEventArgs {
+    testArg: null;
+}
+
+export class TicTacToeGame extends EventEmitter {
+  grid: Grid;
+  gridSize: GridSize;
+  state: TicTacToeGameState = TicTacToeGameState.NOT_STARTED
+  turn: TicTacToePlayer | null = null;
+  winningPlayer: TicTacToePlayer | null = null;
+  
+  constructor(gridSize: GridSize) {
+    super()
+    this.gridSize = gridSize
+    this.grid = gridCreate(gridSize)
+  }
+
+  isNotStarted = ():boolean=>this.state==TicTacToeGameState.NOT_STARTED
+  isOngoing = ():boolean=>this.state==TicTacToeGameState.ONGOING
+  isComplete = ():boolean=>this.state==TicTacToeGameState.COMPLETE
+  
+  start():void{
+    /**
+     * UPDATE STATE
+     */
+
+    this.state=TicTacToeGameState.ONGOING
+    this.turn=TicTacToePlayer.ONE
+    
+    /**
+     * EMIT EVENTS
+     */
+    const args : TicTacToeGameStartEventArgs = {testArg: null}
+    
+    // emit start event
+    this.emit(TicTacToeGameEvents.START, args)
+    return
+  }
+
+  executeTurn(x: number, y: number, value: CellValue.X | CellValue.O) : void {
+
+    // throw error if game is not yet started or complete
+    if(
+        !this.isOngoing()
+    )
+    {
+        throw new Error('game must be started before turn can be executed')
+    }
+      
+    // check if value at cell is already set (!null)
+    if(
+        gridGetCellValue(x,y,this.grid,this.gridSize) != CellValue.NULL
+    )
+    {
+        throw new Error('cell value already set and cannot be overwritten')
+    }
+
+    // can throw bounds error
+    gridSetCellValue(x,y,this.grid,this.gridSize,value)
+
+    // upon successful completion
+    this.onTurnExecuted(x,y,value)
+
+    return
+  }
+
+  executePlayerTurn(player: TicTacToePlayer, x: number, y: number) : void
+  {
+
+    if(this.turn != player)
+    {
+        throw new Error(`cannot take turn for player ${player}, current turn is ${this.turn}`)
+    }
+
+    this.executeTurn(x,y,TicTacToePlayerValueMap[player])
+  }
+
+
+  onTurnExecuted(x: number, y: number, value: CellValue.X | CellValue.O) : void {
+    /**
+     * UPDATE STATE
+     */
+
+    let complete = false;
+
+    // if coordinates are winning
+    if( gridCoordinatesAreWinning(x,y,this.grid,this.gridSize) )
+    {
+        this.winningPlayer = TicTacToeValuePlayerMap[value]
+    }
+
+    // if winningPlayer is set, or grid full (stalemate)
+    if(
+        this.winningPlayer != null
+        ||
+        gridFull(this.grid)
+    )
+    {
+        complete = true
+    }
+     
+    // if complete, update game and turn states
+    if(complete)
+    {
+        this.turn = null
+        this.state = TicTacToeGameState.COMPLETE
+    }
+    // update only turn state
+    else
+    {
+        this.turn == TicTacToePlayer.ONE 
+        ? 
+        this.turn = TicTacToePlayer.TWO
+        :
+        this.turn = TicTacToePlayer.ONE  
+    }
+    
+    /**
+     * EMIT EVENTS
+     */
+    const turnExecutedArgs = {}
+    this.emit(TicTacToeGameEvents.TURN_EXECUTED, turnExecutedArgs)
+    
+    if(complete)
+    {
+        const gameCompleteArgs = {}
+        this.emit(TicTacToeGameEvents.GAME_COMPLETE, gameCompleteArgs)
+    }
+
+    return
+  }
+}
+
+/**
+ * WORKER
+ */
+
+export class TicTacToeWorker {}
