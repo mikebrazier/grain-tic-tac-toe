@@ -1,7 +1,7 @@
 export enum CellValue {
   NULL = 0,
-  X = 1,
-  O = 2,
+  X,
+  O,
 }
 
 /**
@@ -25,6 +25,20 @@ export enum GridSize {
   FOUR,
   FIVE,
   SIX,
+}
+
+export function diagonalCoordinates(gridSize: GridSize) : number[][] {
+  const r : number[][] = [];
+  
+  [
+    ...Array(gridSize).keys()
+  ]
+  .forEach((x)=>{
+    r.push([x, x]);
+    r.push([x,gridSize-1-x])
+  })
+
+  return r
 }
 
 /**
@@ -61,7 +75,7 @@ export function coordinatesArrayContainsCoords(
         x: number, 
         y: number
     ) : boolean {
-        return coordArray.some((v)=>v[0]==x&&v[1]==y)
+        return coordArray.some((coord)=>coord[0]==x&&coord[1]==y)
     } 
 
 /**
@@ -253,7 +267,7 @@ export function gridCoordinatesAreWinning(
 ): boolean {
     // if coordinates are on diagonal, check diagonals
     if( 
-        coordinatesArrayContainsCoords( centerCoordinates(gridSize), x, y )
+        coordinatesArrayContainsCoords( diagonalCoordinates(gridSize), x, y )
     )
     {
         if(
@@ -307,7 +321,7 @@ export function gridSetCellValue(
   value: CellValue
 ): void {
   if (x >= gridSize || y >= gridSize) {
-    throw new TypeError('coordinates beyond grid dimensions');
+    throw new Error('coordinates beyond grid dimensions');
   }
   grid[x][y] = value;
   return
@@ -322,7 +336,16 @@ export function gridSetCellValue(
  */
 export function gridGetCellValue(x: number, y: number, grid: Grid, gridSize: GridSize): CellValue {
   if (x >= gridSize || y >= gridSize) {
-    throw new TypeError('coordinates beyond grid dimensions');
+    throw new Error('coordinates beyond grid dimensions');
   }
   return grid[x][y];
+}
+
+/**
+ * determines if all available spaces within Grid have been filled
+ * @param grid grid
+ * @returns true when all cell values are non-null
+ */
+export function gridFull(grid: Grid) : boolean{
+  return grid.every((column)=>column.every((cell)=>cell!=CellValue.NULL))
 }

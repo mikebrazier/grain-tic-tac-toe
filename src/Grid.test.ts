@@ -36,7 +36,7 @@ describe('gridSetCellValue', () => {
   test('should raise error if coordinates beyond grid dimensions', () => {
     const grid = gridCreate(GridSize.THREE);
     const t = () => gridSetCellValue(3, 3, grid, GridSize.THREE, CellValue.X);
-    expect(t).toThrow(TypeError);
+    expect(t).toThrow(Error);
   });
 });
 
