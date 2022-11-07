@@ -204,7 +204,6 @@ describe(
     'TimedTicTacToeGame',
     () => {
         let game = new TimedTicTacToeGame(GridSize.THREE)
-        const player = TicTacToePlayer.ONE
     
         beforeEach(() => {
             game = new TimedTicTacToeGame(GridSize.THREE)
