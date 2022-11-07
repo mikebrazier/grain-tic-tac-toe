@@ -193,6 +193,43 @@ export class TicTacToeGame extends EventEmitter {
   }
 }
 
+export enum TimedTicTacToeGameEvents {
+    TIMER_EXPIRE = 'TIMER_EXPIRE'
+}
+export class TimedTicTacToeGame extends TicTacToeGame {
+    timeout: NodeJS.Timeout | null = null
+    turnDurationMs = 3000
+    
+    constructor(gridSize: GridSize){
+        super(gridSize)
+        // subscribe to game start even and launch timer
+        this.on(TicTacToeGameEvents.START, ()=>this.resetTimeout())
+        this.on(TicTacToeGameEvents.TURN_EXECUTED, ()=>this.resetTimeout())
+    }
+
+    clearTimeoutIfSet() : void 
+    {
+        if(this.timeout != null)
+        {
+            clearTimeout(this.timeout)
+        }
+    }
+
+    resetTimeout() : void
+    {
+        this.clearTimeoutIfSet()
+        this.timeout = setTimeout(()=>this.onTimeout(), this.turnDurationMs)
+        return
+    }
+
+    onTimeout() : void
+    {
+        const timerExpireArgs = {}
+        this.emit(TimedTicTacToeGameEvents.TIMER_EXPIRE, timerExpireArgs)
+        return
+    }
+}
+
 /**
  * WORKER
  */

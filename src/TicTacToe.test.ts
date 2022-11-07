@@ -1,6 +1,6 @@
 import { gridSetCellValue, GridSize } from './Grid'
 import {
-    TicTacToeGame, TicTacToeGameState, TicTacToePlayer, TicTacToePlayerValueMap
+    TicTacToeGame, TicTacToeGameEvents, TicTacToeGameState, TicTacToePlayer, TicTacToePlayerValueMap, TimedTicTacToeGame
 } from './TicTacToe'
 
 jest.mock('./Grid', () => {
@@ -197,5 +197,56 @@ describe(
                 expect(game.executeTurn).toBeCalled()
             }
         )
+    }
+)
+
+describe(
+    'TimedTicTacToeGame',
+    () => {
+        let game = new TimedTicTacToeGame(GridSize.THREE)
+        const player = TicTacToePlayer.ONE
+    
+        beforeEach(() => {
+            game = new TimedTicTacToeGame(GridSize.THREE)
+        });
+
+        test(
+            'resetTimeout should set timeout',
+            ()=>{
+                game.resetTimeout()
+                expect(game.timeout != null).toBeTruthy()
+            }
+        )
+
+        test(
+            'resetTimeout should be called on START',
+            ()=>{
+                game.resetTimeout = jest.fn()
+                game.start()
+                expect(game.resetTimeout).toBeCalled()
+            }
+        )
+
+        test(
+            'timer should be set on TURN_EXECUTED',
+            ()=>{
+                game.resetTimeout = jest.fn()
+                game.emit(TicTacToeGameEvents.TURN_EXECUTED)
+                expect(game.resetTimeout).toBeCalled()
+            }
+        )
+
+        jest.useFakeTimers();
+        
+        test(
+            'timer should call onTimeout() on timeout expiration',
+            ()=>{
+                game.onTimeout = jest.fn()
+                game.start()
+                jest.runAllTimers()
+                expect(game.onTimeout).toBeCalled()
+            }
+        )
+
     }
 )
