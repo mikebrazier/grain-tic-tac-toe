@@ -1,15 +1,6 @@
 import { EventEmitter } from 'stream';
 import { Grid, GridSize, gridCreate, CellValue, gridGetCellValue, gridSetCellValue, gridCoordinatesAreWinning, gridFull } from './Grid'
 
-/**
- * game of tic tac toe has
- * - 2 players
- * - grid with values
- * - turns
- * - winner, loser
- * - events (start, complete, etc)
- */
-
 export enum TicTacToePlayer {
   ONE = 1,
   TWO
@@ -37,22 +28,6 @@ export enum TicTacToeGameState {
   ONGOING,
   COMPLETE
 }
-
-/**
- * states:
- *  - not started
- *  - inProgress
- *  - complete (winner found or grid filled)
- *    - withWinner
- *    - gridFilled => stalemate
- * 
- * events:
- * - game start
- * - turn executed
- * - game complete
- */
-
-
 
 export enum TicTacToeGameEvents {
     START = 'START',
@@ -229,9 +204,3 @@ export class TimedTicTacToeGame extends TicTacToeGame {
         return
     }
 }
-
-/**
- * WORKER
- */
-
-export class TicTacToeWorker {}
