@@ -1,5 +1,6 @@
 import { EventEmitter } from 'stream';
 import { uid } from 'uid';
+import { uniqueNamesGenerator, adjectives, colors, animals  } from 'unique-names-generator'
 
 export interface User {
     id: string;
@@ -22,7 +23,7 @@ export class UserManager extends EventEmitter {
     {
         const user : User = {
             id: uid(),
-            username: ''
+            username: uniqueNamesGenerator({ dictionaries: [adjectives, colors, animals] })
         }
         this.users[user.id] = user
         this.emit(UserManagerEvents.NEW_USERS)

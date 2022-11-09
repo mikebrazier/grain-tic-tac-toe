@@ -59,8 +59,6 @@ type Query {
  */
 export const createAppApolloServer = async (app: TicTacToeApp, port=4000) => {
 
-
-
     const resolvers = {
         Mutation: {
             createUser: ()=> app.users.createUser(),
