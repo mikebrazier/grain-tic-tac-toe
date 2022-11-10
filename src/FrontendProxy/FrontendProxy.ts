@@ -56,7 +56,10 @@ export const makeFrontEndProxyExpressApp = async () => {
                 console.log(`err: ${err}`)
             })
         }
-        next()
+        else
+        {
+            next()
+        }
     })
 
     // proxy API requests to GraphQL server
@@ -75,7 +78,7 @@ export const makeFrontEndProxyExpressApp = async () => {
     // proxy HTTP WS upgrades
     server.on('upgrade', function (req, socket, head){
         console.log('upgrade')
-        nextJsProxy.ws(req, socket, head);
+        nextJsProxy.ws(req, socket, head) ;
     })
     
     return { app, server }

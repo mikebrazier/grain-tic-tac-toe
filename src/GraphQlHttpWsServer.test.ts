@@ -11,7 +11,8 @@ const queryData = {
     variables: { name: 'world' },
   };
 
-const createUserMutationData = {
+const createUserMutationData
+ = {
     query: `mutation createUser {
         createUser {
             user {
@@ -26,6 +27,39 @@ const createUserMutationData = {
     }`
   }
 
+const createGameMutationData = {
+    query: `mutation createGame($gridSize: Int, $playerOneId: String) {
+        createGame(gridSize: $gridSize, playerOneId: $playerOneId) {
+            game {
+                gameData {
+                    grid
+                    gridSize
+                    state
+                    turn
+                    winningPlayer
+                }
+                id
+                playerIds
+            }
+            games {
+                gameData {
+                    grid
+                    gridSize
+                    state
+                    turn
+                    winningPlayer
+                }
+                id
+                playerIds
+            }
+        }
+    }`,
+    variables: {
+        gridSize: 3,
+        playerOneId: '1234'
+    }
+}
+
 const getUsersQueryData = {
     query: `query getUsers {
         getUsers {
@@ -37,8 +71,131 @@ const getUsersQueryData = {
     }`
 }
   
+const getGamesQueryData = {
+    query: `query getGames {
+        getGames {
+            games {
+                gameData {
+                    grid
+                    gridSize
+                    state
+                    turn
+                    winningPlayer
+                }
+                id
+                playerIds
+            }
+        }
+    }`
+}
+const makeAddUserToGameMutationData = (gameId: string) => ({
+    query: `mutation addUserToGame($gameId: String, $userId: String) {
+        addUserToGame(gameId: $gameId, userId: $userId) {
+            game {
+                gameData {
+                    grid
+                    gridSize
+                    state
+                    turn
+                    winningPlayer
+                }
+                id
+                playerIds
+            }
+            games {
+                gameData {
+                    grid
+                    gridSize
+                    state
+                    turn
+                    winningPlayer
+                }
+                id
+                playerIds
+            }
+        }
+    }`,
+    variables: {
+        gameId: gameId,
+        userId: '5678'
+    }
+})
 
-describe('createUser creates user', ()=>{
+const makeGameStartMutationData = (gameId: string) => ({
+    query: `mutation startGame($gameId: String) {
+        startGame(gameId: $gameId) {
+            game {
+                gameData {
+                    grid
+                    gridSize
+                    state
+                    turn
+                    winningPlayer
+                }
+                id
+                playerIds
+            }
+            games {
+                gameData {
+                    grid
+                    gridSize
+                    state
+                    turn
+                    winningPlayer
+                }
+                id
+                playerIds
+            }
+        }
+    }
+    `,
+    variables: {
+        gameId
+    }
+})
+
+const makeExecuteGameTurnData = (
+    gameId: string,
+    playerId: string,
+    x: number,
+    y: number) => ({
+        query: `mutation executeGameTurn($gameId: String, $playerId: String, $x: Int, $y: Int) {
+            executeGameTurn(gameId: $gameId, playerId: $playerId, x: $x, y: $y) {
+                game {
+                    gameData {
+                        grid
+                        gridSize
+                        state
+                        turn
+                        winningPlayer
+                    }
+                    id
+                    playerIds
+                }
+                games {
+                    gameData {
+                        grid
+                        gridSize
+                        state
+                        turn
+                        winningPlayer
+                    }
+                    id
+                    playerIds
+                }
+            }
+
+        }
+        `,
+        variables: {
+            gameId,
+            playerId,
+            x,
+            y
+        }
+    })
+
+describe('App GraphQL API ', ()=>{
     let app : TicTacToeApp;
     let server : ApolloServer<BaseContext>;
     let url : string;
@@ -92,5 +249,56 @@ describe('createUser creates user', ()=>{
         const add_user_response = await request(url).post('/').send(createUserMutationData);
         const get_users_response =  await request(url).post('/').send(getUsersQueryData)
         expect( get_users_response.body.data.getUsers.users.length).toBe(app.users.makeUserArray().length)
+    })
+
+    it('gets games', async ()=>{
+        const get_games_response = await request(url).post('/').send(getGamesQueryData);
+        expect(get_games_response.body.data.getGames.games.length).toBe(0)
+    })
+
+    it('create games', async ()=>{
+        const create_games_response = await request(url).post('/').send(createGameMutationData);
+        expect(create_games_response.body.data.createGame.games.length).toBe(1)
+    })
+
+    it('adds users to games', async ()=>{
+        const create_games_response = await request(url).post('/').send(createGameMutationData);
+        
+        const add_user_to_game_response = await request(url).post('/').send(makeAddUserToGameMutationData(
+            create_games_response.body.data.createGame.game.id
+        ));
+        expect(
+            add_user_to_game_response.body.data.addUserToGame.game.playerIds.length
+        ).toBe(2)
+    })
+
+    it('starts games', async () => {
+        const create_games_response = await request(url).post('/').send(createGameMutationData);
+        const add_user_to_game_response = await request(url).post('/').send(makeAddUserToGameMutationData(
+            create_games_response.body.data.createGame.game.id
+        ));
+        const start_game_response = await request(url).post('/').send(makeGameStartMutationData(
+            create_games_response.body.data.createGame.game.id
+        ))
+        expect(start_game_response.body.data.startGame.game.gameData.state ).toBe(2)
+    })
+
+    it('execute game turns', async () => {
+        const create_games_response = await request(url).post('/').send(createGameMutationData);
+        const add_user_to_game_response = await request(url).post('/').send(makeAddUserToGameMutationData(
+            create_games_response.body.data.createGame.game.id
+        ));
+        const start_game_response = await request(url).post('/').send(makeGameStartMutationData(
+            create_games_response.body.data.createGame.game.id
+        ))
+        const execute_game_turn_repsonse = await request(url).post('/').send(
+            makeExecuteGameTurnData(
+                create_games_response.body.data.createGame.game.id,
+                '1234',
+                0,
+                0
+            )
+        )
+        expect(execute_game_turn_repsonse.body.data.executeGameTurn.game.gameData.turn).toBe(2)
     })
 })

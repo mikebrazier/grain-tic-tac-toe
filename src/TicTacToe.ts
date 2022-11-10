@@ -56,11 +56,31 @@ export class TicTacToeGame extends EventEmitter {
   isOngoing = ():boolean=>this.state==TicTacToeGameState.ONGOING
   isComplete = ():boolean=>this.state==TicTacToeGameState.COMPLETE
   
+  getGameData(){
+    return {
+      grid: this.grid,
+      gridSize: this.gridSize,
+      state: this.state,
+      turn: this.turn,
+      winningPlayer: this.winningPlayer
+    }
+  }
+
   start():void{
+
+    // TODO
+    // if(
+    //   this.state == TicTacToeGameState.ONGOING
+    //   ||
+    //   this.state == TicTacToeGameState.COMPLETE
+    //   )
+    //   {
+    //     throw new Error(`game state cannot be started from state ${this.state}`)
+    //   }
+
     /**
      * UPDATE STATE
      */
-
     this.state=TicTacToeGameState.ONGOING
     this.turn=TicTacToePlayer.ONE
     
