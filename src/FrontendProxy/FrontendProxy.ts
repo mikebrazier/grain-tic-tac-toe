@@ -77,8 +77,10 @@ export const makeFrontEndProxyExpressApp = async () => {
 
     // proxy HTTP WS upgrades
     server.on('upgrade', function (req, socket, head){
-        console.log('upgrade')
-        nextJsProxy.ws(req, socket, head) ;
+        if(req.url?.includes('/_next'))
+        {
+            nextJsProxy.ws(req, socket, head) ;
+        }
     })
     
     return { app, server }
