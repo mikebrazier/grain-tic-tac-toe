@@ -350,7 +350,7 @@ export function Index() {
         Username: { userFromId?.username } 
       </div>
       <hr style={{width: '100%'}}/>
-      <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
+      <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%'}}>
         <GamesOrderedList 
           games={games} 
           userId={userIdFromCookie} 
@@ -370,22 +370,22 @@ export function Index() {
               gameId: gameId
             }})
           }
-          />
-          <div>
-              <form
-                  onSubmit={e=>{
-                    e.preventDefault()
-                    createGame({variables:{
-                      gridSize: gridSize,
-                      playerOneId: getCookie('user_id')
-                    }})
-                  }}
-                  >
-                  <button type="submit">Create Game</button>
-              </form>
-          </div>
+        />
+        <hr style={{width: '100%'}}/>
+        <div>
+            <form
+                onSubmit={e=>{
+                  e.preventDefault()
+                  createGame({variables:{
+                    gridSize: gridSize,
+                    playerOneId: getCookie('user_id')
+                  }})
+                }}
+                >
+                <button type="submit">Create Game</button>
+            </form>
+        </div>
       </div>
-      <hr style={{width: '100%'}}/>
           {/* <form
             onSubmit={e=>{
               e.preventDefault()
