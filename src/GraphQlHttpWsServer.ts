@@ -2,6 +2,12 @@ import { ApolloServer } from '@apollo/server'
 import { startStandaloneServer } from '@apollo/server/standalone'
 import { TicTacToeApp } from './TicTacToeApp'
 import { TicTacToeGameWithUsers } from './GameManager'
+import * as express from 'express'
+import * as cors from 'cors'
+import {json} from 'body-parser'
+import { expressMiddleware } from '@apollo/server/express4';
+import * as http from 'http';
+import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
 
 // Schema definition
 export const typeDefs = `
@@ -186,12 +192,25 @@ export const createAppApolloServer = async (app: TicTacToeApp, port=4000) => {
         },
     };
 
+    const expressApp = express();
+    const httpServer = http.createServer(expressApp);
+
     const server = new ApolloServer({
             typeDefs,
             resolvers,
+            plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
         });
+
+    await server.start()
     
-    const { url } = await startStandaloneServer(server, {listen: { port: port }})
+    expressApp.use(
+        '/', 
+        cors<cors.CorsRequest>(), 
+        json(), 
+        expressMiddleware(server)
+        )
+
+    await new Promise<void>((resolve) => httpServer.listen({ port: port }, resolve));
     
-    return { server, url }
+    return { server,  url: `http://localhost:${port}` }
 }
