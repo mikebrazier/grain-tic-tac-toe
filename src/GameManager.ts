@@ -48,8 +48,8 @@ export class GameManager extends EventEmitter {
             id: uid()
         }
         this.games[game.id] = game
-        this.emit(GameManagerEvents.NEW_GAMES)
         const games = this.makeGamesArray()
+        this.emit(GameManagerEvents.NEW_GAMES, { game, games: this.makeGamesArray()})
         return { game, games }
     }
 
@@ -64,9 +64,8 @@ export class GameManager extends EventEmitter {
         }
 
         this.games[gameId].playerIds.push(userId)
-
         const games = this.makeGamesArray()
-
+        this.emit(GameManagerEvents.NEW_GAMES, { game, games: this.makeGamesArray()})
         return { game, games }
     }
 
@@ -93,6 +92,7 @@ export class GameManager extends EventEmitter {
 
         game.game.start()
         const games = this.makeGamesArray()
+        this.emit(GameManagerEvents.NEW_GAMES, { game, games: this.makeGamesArray()})
         return { game, games }
     }
 
@@ -113,7 +113,7 @@ export class GameManager extends EventEmitter {
         game.game.executePlayerTurn(playerTurn, x, y)
 
         const games = this.makeGamesArray()
-
+        this.emit(GameManagerEvents.NEW_GAMES, { game, games: this.makeGamesArray()})
         return { game, games }
 
     }

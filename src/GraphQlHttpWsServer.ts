@@ -1,14 +1,17 @@
 import { ApolloServer } from '@apollo/server'
-import { startStandaloneServer } from '@apollo/server/standalone'
 import { TicTacToeApp } from './TicTacToeApp'
-import { TicTacToeGameWithUsers } from './GameManager'
+import { TicTacToeGameWithUsers, GameManagerEvents } from './GameManager'
 import * as express from 'express'
 import * as cors from 'cors'
 import {json} from 'body-parser'
 import { expressMiddleware } from '@apollo/server/express4';
 import * as http from 'http';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
-
+import { makeExecutableSchema } from '@graphql-tools/schema';
+import { WebSocketServer } from 'ws'
+import { useServer } from 'graphql-ws/lib/use/ws'
+import { PubSub } from 'graphql-subscriptions';
+import { UserManagerEvents } from './UserManager'
 // Schema definition
 export const typeDefs = `
 #graphql
@@ -125,6 +128,27 @@ mutation executeGameTurn {
         games
     }
 }
+
+type Subscription {
+     newGames : GamesMutationResponse
+}
+
+subscription newGames {
+    newGames {
+        game
+        games
+    }
+}
+
+type Subscription {
+    newUsers : QueryGetUsersResponse
+}
+
+subscription newUsers {
+    newUsers {
+        users
+    }
+}
 `;
 
 function makeGamesMutationResponse( game: TicTacToeGameWithUsers, games:   TicTacToeGameWithUsers[] )
@@ -151,6 +175,32 @@ function makeGamesMutationResponse( game: TicTacToeGameWithUsers, games:   TicTa
  * @returns 
  */
 export const createAppApolloServer = async (app: TicTacToeApp, port=4000) => {
+
+
+    /**
+     * subscribe pubsub to game events
+     */
+
+     const pubsub = new PubSub();
+
+     app.games.addListener(GameManagerEvents.NEW_GAMES, ({game, games})=>{
+         pubsub.publish(GameManagerEvents.NEW_GAMES, {
+             newGames: makeGamesMutationResponse(game,games)
+         })
+     })
+
+     app.users.addListener(UserManagerEvents.NEW_USERS, ({users})=>{
+        console.log(`users: ${JSON.stringify(users)}`)
+        pubsub.publish(UserManagerEvents.NEW_USERS, {
+            newUsers: {
+                users
+            }
+        })
+    })
+
+     /**
+      * define resolvers
+      */
 
     const resolvers = {
         Mutation: {
@@ -190,19 +240,51 @@ export const createAppApolloServer = async (app: TicTacToeApp, port=4000) => {
                 
             })) })
         },
+        Subscription: {
+            newGames: {
+                subscribe: () => pubsub.asyncIterator([GameManagerEvents.NEW_GAMES])
+            },
+            newUsers: {
+                subscribe: () => pubsub.asyncIterator([UserManagerEvents.NEW_USERS])
+            }
+          },
     };
+
+    /**
+     * configure GraphQL Http/WS server
+     */
 
     const expressApp = express();
     const httpServer = http.createServer(expressApp);
 
+    const wsServer = new WebSocketServer({
+        server: httpServer,
+        path: '/api/'
+    })
+
+    const schema = makeExecutableSchema({ typeDefs, resolvers });
+    const serverCleanup = useServer({ schema }, wsServer);
+    
     const server = new ApolloServer({
-            typeDefs,
-            resolvers,
-            plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
-        });
+        typeDefs,
+        resolvers,
+        plugins: [
+            ApolloServerPluginDrainHttpServer({ httpServer }),
+                // Proper shutdown for the WebSocket server.
+            {
+                async serverWillStart() {
+                    return {
+                        async drainServer() {
+                        await serverCleanup.dispose();
+                        },
+                    };
+                },
+            },
+        ],
+    });
 
     await server.start()
-    
+
     expressApp.use(
         '/', 
         cors<cors.CorsRequest>(), 

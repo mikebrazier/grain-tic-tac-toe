@@ -26,7 +26,7 @@ export class UserManager extends EventEmitter {
             username: uniqueNamesGenerator({ dictionaries: [adjectives, colors, animals] })
         }
         this.users[user.id] = user
-        this.emit(UserManagerEvents.NEW_USERS)
+        this.emit(UserManagerEvents.NEW_USERS, { users: this.makeUserArray() })
         return { 
             user: user, 
             users: this.makeUserArray()

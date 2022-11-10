@@ -17,18 +17,20 @@ const USER_ID_COOKIE = 'user_id'
 export const makeFrontEndProxyExpressApp = async () => {
 
     const app = express();
+   
     const nextJsProxy = httpProxy.createProxyServer({
         target:{
-           host: 'localhost', 
-           port: 3000
-       }
-   });
+            host: 'localhost', 
+            port: 3000
+        }
+    });
+
    const graphQlProxy = httpProxy.createProxyServer({
-    target:{
-       host: 'localhost', 
-       port: 4000
-   }
-});
+        target:{
+            host: 'localhost', 
+            port: 4000
+        }
+    });
 
     // parse cookies
     app.use(cookieParser())
@@ -80,6 +82,10 @@ export const makeFrontEndProxyExpressApp = async () => {
         if(req.url?.includes('/_next'))
         {
             nextJsProxy.ws(req, socket, head) ;
+        }
+        else
+        {
+            graphQlProxy.ws(req, socket, head) ;
         }
     })
     

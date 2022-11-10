@@ -1,11 +1,16 @@
 import {  useRef, useState, useEffect } from 'react'
 import { gql } from "@apollo/client"
+import { getMainDefinition } from '@apollo/client/utilities';
 import { getCookie } from 'cookies-next';
 import { ApolloProvider } from "@apollo/client";
-import { ApolloClient, InMemoryCache, useMutation, useQuery } from "@apollo/client";
+import { ApolloClient, InMemoryCache, useMutation, useQuery, useSubscription } from "@apollo/client";
 import { User } from '../src/UserManager'
 import { TicTacToeGameData } from './../src/GameManager'
 import ClientOnly from './../components/ClientOnly'
+import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
+
+import { split, HttpLink } from '@apollo/client';
+import { createClient } from 'graphql-ws';
 /**
  * gameServerClient runs serverside and connects to Apollo API
  */
@@ -131,6 +136,33 @@ const START_GAME = gql`mutation startGame($gameId: String) {
   }
 }`
 
+const GAMES_SUBSCRIPTION = gql`subscription newGames {
+    newGames {
+      games {
+          gameData {
+              grid
+              gridSize
+              state
+              turn
+              winningPlayer
+          }
+          id
+          playerIds
+      }
+    }
+  }
+`;
+
+const USERS_SUBSCRIPTION = gql`subscription newUsers {
+  newUsers {
+    users {
+        id
+        username
+    }
+  }
+}
+`;
+
 const usePrevious = (value) => {
   const ref = useRef();
   useEffect(() => ref.current = value);
@@ -152,7 +184,6 @@ export function GamesOrderedList ({games, userId, users, onAddUserToGame, onStar
   return(
     <table>
       <tr>
-        <th>Game Id</th>
         <th>Players</th>
         <th>Join</th>
         <th>Start</th>
@@ -172,8 +203,6 @@ export function GamesOrderedList ({games, userId, users, onAddUserToGame, onStar
         [...games].map(
           (game)=>(
             <tr key={game.id}>
-              {/* Game Id */}
-              <td>{game.id}</td>
               {/* Players */}
               <td>
                 {
@@ -232,10 +261,18 @@ export function Index() {
   // API CALLS
   const { data: getUsersAPIData } = useQuery(GET_USERS)
   const { data: getGamesAPIData } = useQuery(GET_GAMES)
-  const [setUsernameAPI, { data: setUsernameAPIData  }] = useMutation(SET_USERNAME);
-  const [createGame, { data: createGameData }] = useMutation(CREATE_GAME);
-  const [addUserToGameAPI, {data: addUserToGameAPIData } ] = useMutation(ADD_USER_TO_GAME)
-  const [startGameAPI, {data: startGameAPIData}] = useMutation(START_GAME)
+  const [setUsernameAPI] = useMutation(SET_USERNAME);
+  const [createGame] = useMutation(CREATE_GAME);
+  const [addUserToGameAPI] = useMutation(ADD_USER_TO_GAME)
+  const [startGameAPI] = useMutation(START_GAME)
+  
+  const { data : newGamesSubData } = useSubscription(
+    GAMES_SUBSCRIPTION
+  );
+
+  const { data : newUsersSubData } = useSubscription(
+    USERS_SUBSCRIPTION
+  );
 
   /**
    * DYNAMIC DATA
@@ -249,30 +286,25 @@ export function Index() {
   useEffect(
     ()=>{
       console.log(`
-      usernameFromInput: ${usernameFromInput}, 
-      userIdFromCookie: ${userIdFromCookie},
-      users: ${JSON.stringify(users)}`
-      )
+      newUsersSubData: ${JSON.stringify(newUsersSubData)}
+      `)
+      
       if(
-        setUsernameAPIData?.setUsername?.users
+        newUsersSubData?.newUsers?.users
       )
       {
-        setUsers(
-          setUsernameAPIData?.setUsername?.users
-          )
+        setUsers( newUsersSubData?.newUsers?.users )
       }
       else if(
-        getUsersAPIData?.getUsers.users
+        getUsersAPIData?.getUsers?.users
       )
       {
-        setUsers(
-          getUsersAPIData?.getUsers.users
-          )
+        setUsers( getUsersAPIData?.getUsers?.users )
       }
     },
     [
       getUsersAPIData,
-      setUsernameAPIData
+      newUsersSubData
     ]
   )
 
@@ -292,11 +324,10 @@ export function Index() {
   const [games, setGames] = useState([])
   useEffect(()=>{
     // const prevCreateGameData = usePrevious()
-
-    console.log(`args: ${JSON.stringify(arguments)}`)
-    if(createGameData?.createGame?.games)
+    
+    if(newGamesSubData?.newGames?.games)
     {
-      setGames(createGameData?.createGame?.games)
+      setGames(newGamesSubData?.newGames?.games)
     }
     else if (
       getGamesAPIData?.getGames?.games
@@ -304,27 +335,9 @@ export function Index() {
     {
       setGames(getGamesAPIData?.getGames?.games)
     }
-    else if (
-      startGameAPIData?.startGame?.games
-    )
-    {
-      setGames(
-        startGameAPIData?.startGame?.games
-        )
-    }
-    else if (
-      addUserToGameAPIData?.addUserToGameAPIData?.games
-    )
-    {
-      setGames(
-        addUserToGameAPIData?.addUserToGame?.games
-      )
-    }
   },[
-      createGameData,
       getGamesAPIData,
-      addUserToGameAPIData,
-      startGameAPIData
+      newGamesSubData
     ])
   
   // username
@@ -412,18 +425,46 @@ export function Index() {
 
 // default export returns Index component wrapped
 // with Provider providing browser ApolloClient 
-export default function WrappedIndex(){
+export function WrappedIndex(){
+
+  const httpLink = new HttpLink({
+    uri: "http://localhost:81/api/"
+  })
+
+  const wsLink = new GraphQLWsLink(createClient({
+    url: "ws://localhost:81/api/"
+  }))
+
+  const splitLink = split(
+    ({ query }) => {
+      const definition = getMainDefinition(query);
+      return (
+        definition.kind === 'OperationDefinition' &&
+        definition.operation === 'subscription'
+      );
+    },
+    wsLink,
+    httpLink,
+  );
+
   // apollo client for browser client
   const client = new ApolloClient({
-    uri: "http://localhost:81/api/'",
+    link: splitLink,
     cache: new InMemoryCache(),
   });
   
 return(
     <ApolloProvider client={client}>
-      <ClientOnly>
       <Index></Index>
-      </ClientOnly>
     </ApolloProvider>
+  
+  )
+}
+
+export default function ClientOnlyIndex(){
+  return(
+    <ClientOnly>
+      <WrappedIndex/>
+    </ClientOnly>
   )
 }
