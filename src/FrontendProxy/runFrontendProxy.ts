@@ -1,9 +1,8 @@
 import { 
     makeFrontEndProxyExpressApp,
-    FRONT_END_PROXY_PORT 
 } from './FrontendProxy'
 import { 
-    AppWithServer, 
+
     createAppWithServer 
 } from './../AppWithServer'
 

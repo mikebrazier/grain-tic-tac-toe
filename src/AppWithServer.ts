@@ -9,8 +9,7 @@ import { ApolloServer, BaseContext } from '@apollo/server'
 
 export const createAppWithServer = async () => {
     const app = new TicTacToeApp()
-    let server, url
-    ({server, url} = await createAppApolloServer(app))
+    const {server, url} = await createAppApolloServer(app)
     return new AppWithServer(app, server, url)
 }
 

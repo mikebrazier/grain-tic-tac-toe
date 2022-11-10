@@ -1,11 +1,11 @@
 import { ApolloServer } from '@apollo/server'
 import { TicTacToeApp } from './TicTacToeApp'
 import { TicTacToeGameWithUsers, GameManagerEvents } from './GameManager'
-import * as express from 'express'
-import * as cors from 'cors'
+import express from 'express'
+import cors from 'cors'
 import {json} from 'body-parser'
 import { expressMiddleware } from '@apollo/server/express4';
-import * as http from 'http';
+import http from 'http';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { WebSocketServer } from 'ws'
@@ -190,7 +190,6 @@ export const createAppApolloServer = async (app: TicTacToeApp, port=4000) => {
      })
 
      app.users.addListener(UserManagerEvents.NEW_USERS, ({users})=>{
-        console.log(`users: ${JSON.stringify(users)}`)
         pubsub.publish(UserManagerEvents.NEW_USERS, {
             newUsers: {
                 users
@@ -204,9 +203,15 @@ export const createAppApolloServer = async (app: TicTacToeApp, port=4000) => {
 
     const resolvers = {
         Mutation: {
-            createUser: ()=> app.users.createUser(),
+            createUser: ()=> {
+                const ret = app.users.createUser()
+                return ret
+            },
             // @ts-ignore
-            setUsername: (_, { id, username })=>app.users.setUserUsername(id, username),
+            setUsername: (_, { id, username })=>{
+                const ret = app.users.setUserUsername(id, username)
+                return ret
+            },
             // @ts-ignore
             createGame: (_, {gridSize, playerOneId}) =>{
                 const {game, games} = app.games.createGame(gridSize, playerOneId)

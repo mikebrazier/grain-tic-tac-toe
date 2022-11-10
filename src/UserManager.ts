@@ -36,7 +36,10 @@ export class UserManager extends EventEmitter {
     setUserUsername(id: string, username: string)
     {
         this.users[id].username = username
-        this.emit(UserManagerEvents.NEW_USERS)
-        return { user: this.users[id], users: this.makeUserArray() }
+        this.emit(UserManagerEvents.NEW_USERS, { users: this.makeUserArray() })
+        return { 
+            user: this.users[id], 
+            users: this.makeUserArray()
+            }
     }
 }

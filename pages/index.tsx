@@ -1,22 +1,18 @@
-import {  useRef, useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { gql } from "@apollo/client"
-import { getMainDefinition } from '@apollo/client/utilities';
 import { getCookie } from 'cookies-next';
 import { ApolloProvider } from "@apollo/client";
-import { ApolloClient, InMemoryCache, useMutation, useQuery, useSubscription } from "@apollo/client";
+import { useMutation, useQuery, useSubscription } from "@apollo/client";
 import { User } from '../src/UserManager'
 import { TicTacToeGameData } from './../src/GameManager'
 import ClientOnly from './../components/ClientOnly'
-import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
+import {makeBrowserApolloClient} from './../src/makeBrowserApolloClient'
 
-import { split, HttpLink } from '@apollo/client';
-import { createClient } from 'graphql-ws';
 /**
- * gameServerClient runs serverside and connects to Apollo API
+ * GraphQL Queries
  */
-// const gameServerClient = makeApolloNextClient()
 
-const GET_USERS =  gql`query getUsers {
+export const GET_USERS =  gql`query getUsers {
   getUsers {
       users {
           id
@@ -25,7 +21,7 @@ const GET_USERS =  gql`query getUsers {
   }
 }`
 
-const GET_GAMES = gql`query getGames {
+export const GET_GAMES = gql`query getGames {
   getGames {
       games {
           gameData {
@@ -41,19 +37,18 @@ const GET_GAMES = gql`query getGames {
   }
 }`
 
-// define mutation which allows user to change username
-const SET_USERNAME = gql`mutation setUsername($id: String, $username: String){
-  setUsername(id: $id, username: $username) {
-      user {
-          id
-          username
-      }
-      users {
-          id
-          username
-      }
-  }
-}`
+// const SET_USERNAME = gql`mutation setUsername($id: String, $username: String){
+//   setUsername(id: $id, username: $username) {
+//       user {
+//           id
+//           username
+//       }
+//       users {
+//           id
+//           username
+//       }
+//   }
+// }`
 
 const CREATE_GAME = gql`mutation createGame($gridSize: Int, $playerOneId: String) {
   createGame(gridSize: $gridSize, playerOneId: $playerOneId) {
@@ -136,7 +131,7 @@ const START_GAME = gql`mutation startGame($gameId: String) {
   }
 }`
 
-const GAMES_SUBSCRIPTION = gql`subscription newGames {
+export const GAMES_SUBSCRIPTION = gql`subscription newGames {
     newGames {
       games {
           gameData {
@@ -153,7 +148,7 @@ const GAMES_SUBSCRIPTION = gql`subscription newGames {
   }
 `;
 
-const USERS_SUBSCRIPTION = gql`subscription newUsers {
+export const USERS_SUBSCRIPTION = gql`subscription newUsers {
   newUsers {
     users {
         id
@@ -163,54 +158,87 @@ const USERS_SUBSCRIPTION = gql`subscription newUsers {
 }
 `;
 
-const usePrevious = (value) => {
-  const ref = useRef();
-  useEffect(() => ref.current = value);
-  return ref.current;
-};
+/**
+ * HELPER FUNCTIONS
+ */
 
 const getUserById = (userId: string, users: User[])=>users.find((u)=>u.id==userId)
-
 const userCanJoin = (userId: string, playerIds: string[]) =>(
   ! playerIds.includes(userId)
   &&
   playerIds.length < 2
 )
-const canStartGame = (game : TicTacToeGameData, userId: string ) => game.playerIds[0] == userId && game.playerIds.length == 2 && game.gameData.state != 2
+const canStartGame = (game : TicTacToeGameData, userId: string ) => game.playerIds[0] == userId && game.playerIds.length == 2 && game.gameData.state == 1
+const canGoToGame = (game : TicTacToeGameData, userId: string) => game.playerIds.includes(userId) && (game.gameData.state == 2 || game.gameData.state == 3)
 
-const canGoToGame = (game : TicTacToeGameData, userId: string) => game.playerIds.includes(userId) && game.gameData.state == 2
+/**
+ * COMPONENTS
+ */
 
 export function GamesOrderedList ({games, userId, users, onAddUserToGame, onStartGame } : {games: TicTacToeGameData[], userId: string, users: User[], onAddUserToGame : (gameId : string, userId: string )=>void, onStartGame : (gameId: string) => void}){
   return(
-    <table>
+    <table> 
       <tr>
         <th>Players</th>
+        {/* <th>Winner</th> */}
+        {/* <th>Loser</th> */}
+        <th>Grid Size</th>
         <th>Join</th>
         <th>Start</th>
         <th>Go To</th>
       </tr>
       {
-        /**
-        sort((a,b)=>{
-          if(a.playerIds.length > b.playerIds.length)
-          {
-            return 1
-          }
-          
-          return -1
-        })
-         */
-        [...games].map(
+        [...games].filter((g)=>g.gameData.state != 3).map(
           (game)=>(
             <tr key={game.id}>
               {/* Players */}
-              <td>
+              <td style={{ textAlign: 'center' }}>
                 {
                   game.playerIds.length == 2
                   ?
                   getUserById(game.playerIds[0], users)?.username+' vs. '+getUserById(game.playerIds[1], users)?.username
                   :
                   getUserById(game.playerIds[0], users)?.username
+                }
+              </td>
+              {/* WINNER */}
+              {/* <td>
+                {
+                  game.gameData.winningPlayer == null
+                  ?
+                  ''
+                  :
+                  (
+                    game.gameData.winningPlayer == 1
+                    ?
+                    getUserById(game.playerIds[0], users)?.username
+                    :
+                    getUserById(game.playerIds[1], users)?.username
+                  ) 
+                }
+              </td> */}
+              {/* LOSER */}
+              {/* <td>
+                {
+                  game.gameData.winningPlayer == null
+                  ?
+                  ''
+                  :
+                  (
+                    // if TicTacToePlayer.ONE == 1
+                    game.gameData.winningPlayer == 1
+                    ?
+                    // TicTacToePlayer.TWO is loser (index 1 of playerIds)
+                    getUserById(game.playerIds[1], users)?.username
+                    :
+                    getUserById(game.playerIds[0], users)?.username
+                  ) 
+                }
+              </td> */}
+              {/* Grid Size */}
+              <td style={{ textAlign: 'center' }}>
+                {
+                  game.gameData.gridSize
                 }
               </td>
               {/* Join */}
@@ -241,7 +269,7 @@ export function GamesOrderedList ({games, userId, users, onAddUserToGame, onStar
                 {
                   canGoToGame(game, userId)
                   ?
-                  <a href={`/game/${game.id}`}>
+                  <a href={`/game?id=${game.id}`}>
                     <button disabled={false}>GO TO</button>
                   </a>
                   :
@@ -261,15 +289,13 @@ export function Index() {
   // API CALLS
   const { data: getUsersAPIData } = useQuery(GET_USERS)
   const { data: getGamesAPIData } = useQuery(GET_GAMES)
-  const [setUsernameAPI] = useMutation(SET_USERNAME);
+  // const [setUsernameAPI] = useMutation(SET_USERNAME);
   const [createGame] = useMutation(CREATE_GAME);
   const [addUserToGameAPI] = useMutation(ADD_USER_TO_GAME)
   const [startGameAPI] = useMutation(START_GAME)
-  
   const { data : newGamesSubData } = useSubscription(
     GAMES_SUBSCRIPTION
   );
-
   const { data : newUsersSubData } = useSubscription(
     USERS_SUBSCRIPTION
   );
@@ -278,17 +304,12 @@ export function Index() {
    * DYNAMIC DATA
    */
   // userId
-  const [userIdFromCookie, setUserIdFromCookie] = useState(getCookie('user_id'))
+  const [userIdFromCookie] = useState(getCookie('user_id'))
   
   // users
   const [users, setUsers] = useState<User[]>([])
-
   useEffect(
     ()=>{
-      console.log(`
-      newUsersSubData: ${JSON.stringify(newUsersSubData)}
-      `)
-      
       if(
         newUsersSubData?.newUsers?.users
       )
@@ -323,7 +344,6 @@ export function Index() {
   // games
   const [games, setGames] = useState([])
   useEffect(()=>{
-    // const prevCreateGameData = usePrevious()
     
     if(newGamesSubData?.newGames?.games)
     {
@@ -341,7 +361,7 @@ export function Index() {
     ])
   
   // username
-  const [ usernameFromInput, setUsernameFromInput ]  = useState('')
+  // const [ usernameFromInput, setUsernameFromInput ]  = useState('')
 
   // gridSize
   const[gridSize, setGridSize] = useState(3)
@@ -386,7 +406,18 @@ export function Index() {
         />
         <hr style={{width: '100%'}}/>
         <div>
-            <form
+            <div style={{display: 'flex', flexDirection: 'row', alignContent: 'center', alignItems: 'center'}}>
+              Grid Size:
+              <select
+                onChange={(e)=>{ setGridSize(parseInt(e.target.value)) }} 
+                name="grid size" 
+              >
+                <option value={3}>3x3</option>
+                <option value={4}>4x4</option>
+                <option value={5}>5x5</option>
+                <option value={6}>6x6</option>
+              </select>
+              <form
                 onSubmit={e=>{
                   e.preventDefault()
                   createGame({variables:{
@@ -394,9 +425,13 @@ export function Index() {
                     playerOneId: getCookie('user_id')
                   }})
                 }}
+                style={{
+                  marginLeft: '10px'
+                }}
                 >
                 <button type="submit">Create Game</button>
             </form>
+            </div>
         </div>
       </div>
           {/* <form
@@ -423,48 +458,19 @@ export function Index() {
   )
 }
 
-// default export returns Index component wrapped
-// with Provider providing browser ApolloClient 
-export function WrappedIndex(){
-
-  const httpLink = new HttpLink({
-    uri: "http://localhost:81/api/"
-  })
-
-  const wsLink = new GraphQLWsLink(createClient({
-    url: "ws://localhost:81/api/"
-  }))
-
-  const splitLink = split(
-    ({ query }) => {
-      const definition = getMainDefinition(query);
-      return (
-        definition.kind === 'OperationDefinition' &&
-        definition.operation === 'subscription'
-      );
-    },
-    wsLink,
-    httpLink,
-  );
-
-  // apollo client for browser client
-  const client = new ApolloClient({
-    link: splitLink,
-    cache: new InMemoryCache(),
-  });
-  
-return(
+export function IndexWithApolloClient(){
+  const client = makeBrowserApolloClient()
+  return(
     <ApolloProvider client={client}>
       <Index></Index>
     </ApolloProvider>
-  
   )
 }
 
 export default function ClientOnlyIndex(){
   return(
     <ClientOnly>
-      <WrappedIndex/>
+      <IndexWithApolloClient/>
     </ClientOnly>
   )
 }

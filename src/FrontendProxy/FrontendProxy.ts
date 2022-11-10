@@ -1,10 +1,8 @@
 // import * as proxy from 'express-http-proxy'
-import * as express from "express";
-import * as cookieParser from 'cookie-parser'
-import { uniqueNamesGenerator, adjectives, colors, animals } from 'unique-names-generator'
+import express from "express";
+import cookieParser from 'cookie-parser'
 import { request, gql } from 'graphql-request'
-import { createServer } from 'http'
-import * as httpProxy from 'http-proxy'
+import httpProxy from 'http-proxy'
 
 export const FRONT_END_PROXY_PORT = 81
 export const FRONT_END_PROXY_URI = `http://localhost:${FRONT_END_PROXY_PORT}`

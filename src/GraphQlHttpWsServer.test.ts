@@ -1,15 +1,7 @@
 import { createAppApolloServer } from './GraphQlHttpWsServer';
 import { ApolloServer, BaseContext } from '@apollo/server'
 import {TicTacToeApp} from './TicTacToeApp'
-import * as request from 'supertest'
-import exp = require('constants');
-
-const queryData = {
-    query: `query sayHello($name: String) {
-      hello(name: $name)
-    }`,
-    variables: { name: 'world' },
-  };
+import request from 'supertest'
 
 const createUserMutationData
  = {
@@ -233,7 +225,7 @@ describe('App GraphQL API ', ()=>{
                         username
                     }
                 }
-            }`,
+              }`,
             variables: { 
                 id: response.body.data.createUser.user.id,
                 username: 'test'
@@ -241,7 +233,6 @@ describe('App GraphQL API ', ()=>{
         }
 
         const un_response = await request(url).post('/').send(setUserUsernameMutationData);
-
         expect( un_response.body.data.setUsername.user.username).toBe( 'test' );
     })
 

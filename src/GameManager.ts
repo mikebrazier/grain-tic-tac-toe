@@ -1,6 +1,5 @@
 import { EventEmitter } from 'stream'
-import {TicTacToeGame, TimedTicTacToeGame} from './TicTacToe'
-import { User } from './UserManager'
+import { TicTacToeGame } from './TicTacToe'
 import { uid } from 'uid';
 import { Grid, GridSize } from './Grid';
 import { TicTacToePlayer, TicTacToeGameState } from './TicTacToe'
@@ -108,7 +107,7 @@ export class GameManager extends EventEmitter {
 
         // else, player[0] => Player 1, player[1] => Player 2
         let playerTurn : TicTacToePlayer;
-        playerId == game.playerIds[0] ? playerTurn = TicTacToePlayer.ONE : playerTurn = TicTacToePlayer.ONE
+        playerId == game.playerIds[0] ? playerTurn = TicTacToePlayer.ONE : playerTurn = TicTacToePlayer.TWO
 
         game.game.executePlayerTurn(playerTurn, x, y)
 
